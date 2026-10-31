@@ -104,7 +104,7 @@ as described in @connections.
 The decryption engine implements the four inverse operations required to decrypt the provided
 ciphertext. The inverses of AddRoundKey, MixColumns, ShiftRows, and SubBytes are implemented in
 InvAddRoundKey, InvMixColumns, InvShiftRows, and InvSubBytes respectively. InvAddRoundKey reverses
-the Galois field addition by XORing the ciphertext with the roundkey. InvMixColumns reverses the
+the Galois field addition by XORing the ciphertext with the round key. InvMixColumns reverses the
 column-mixing matrix operation by multiplying by the inverse matrix in the Galois field.
 InvShiftRows implements the inverse of the row shift operation by repacking bytes. InvSubBytes
 computes the byte substitution via a precomputed 8-input lookup table.
@@ -291,6 +291,7 @@ two approaches seem particularly interesting:
 HECTOR contains some additional functionality that should help to ensure that this problem is
 tractible. By directing the prover to determine equivalence and inverseness of the individual
 modules in the design.
+#set par(first-line-indent: (amount: 0.25in, all: true))
 
 = Preliminary Testbench Components
 
@@ -303,9 +304,10 @@ will be passed to the agents in the AES environment detailed above.
 The code is still in its early phases; the modules and assertions currently implemented likely have
 a number of bugs. Additionally, a much of the UVM framework is not yet implemented. In particular,
 the agents, scoreboard, tests, stimulus, and reference model still have to be written. The testbench
-and interfaces that have been implemented are below.
+and interfaces that have been implemented are below. I do not have any preliminary simulation
+results at this time.
 
-
+#set par(first-line-indent: 0em)
 == AES Core Testbench
 #v(0.7em)
 #raw(read("../../src/hvl/tbs/aes_tb.sv"), lang: "systemverilog")
@@ -321,5 +323,33 @@ and interfaces that have been implemented are below.
 === Key Schedule Buffer Interface
 #v(0.7em)
 #raw(read("../../src/hvl/bfms/ksch_buffer_if.sv"), lang: "systemverilog")
+#set par(first-line-indent: (amount: 0.25in, all: true))
 
+#pagebreak()
 = Conclusions
+
+This report defines the verification plan for the AES Decryption Core from OpenCores. Our
+verification effort is focused on determining functional equivalence with a software reference
+model of AES decryption through constrained random verification techniques. This is supported by
+directed testing on known test vectors and experimental formal verification techniques. Through
+these techniques, we hope to verify both the correctness of our software reference model and the
+design under test.
+
+Our verification plan identifies two coverage-critical areas: the Sbox and InvSbox modules. These
+modules implement the S-box and inverse S-box transforms as hardcoded, 256-element lookup tables.
+Covering every possible input to these lookup tables is critical to verifying the correctness of
+the design as a whole. Other modules along the datapath implement simpler functions that should
+break in predictable ways. The risk for these modules is relatively low, so a black-box
+testing approach with coverage tracked on the cipher text and key text interfaces. Targeting 100%
+coverage on the Sbox and InvSbox modules may seem difficult to achieve, but the pseudo-randomness
+properties of the AES algorithm should help to ensure that our randomly generated test vecotrs
+effectively test the whole design.
+
+Overall, though there is a lot of verification code left to implement, the project is progressing
+quite well. A basic framework has been laid out for the testbench and plans are in place for the
+environment, stimulus, and required tests. One of the most difficult parts that remains is the
+implementation of the reference model. Even still, I should be able to complete the model and
+test environment within the required time frame. In the near future, I will continue to develop
+this test environment with the goal of starting serious constrained-random testing within two
+weeks.
+

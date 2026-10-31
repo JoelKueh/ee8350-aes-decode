@@ -34,20 +34,6 @@
   justify: false,
 )
 
-#let sim-results(body) = {
-  set text(
-    font: ("Courier New", "Courier"),
-    size: 10pt,
-    top-edge: 0.8em,
-    bottom-edge: -0.2em,
-  )
-  set par(
-    leading: 0.15em,
-    spacing: 0.15em,
-  )
-  body
-}
-
 // ==========================================
 // 1. TITLE PAGE (1 Page)
 // ==========================================
@@ -64,9 +50,9 @@
   Decryption Core from OpenCores. This core contains an implementation of the AES decryption
   algorithm described in FIPS-197 and is parameterizable for key lengths of 128, 192, and 256 bits.
   The core is verified against a behavioral reference model of the AES core and against selected
-  test vectors from FIPS-197, SP-800a, and AESAVS specifications. Primary coverage is obtained from
-  system-level tests; additional coverage can be gained from module-level tests targeting the
-  Decryption Engine and Key Expander individually as needed.
+  test vectors from FIPS-197, NIST SP 800-38A, and AESAVS specifications. Primary coverage is
+  obtained from system-level tests; additional coverage can be gained from module-level tests
+  targeting the Decryption Engine and Key Expander individually as needed.
 ]
 
 #set page(numbering: "1")
@@ -96,7 +82,7 @@ OpenCores provides three different top modules for their AES core, one for each 
 The three different parameterizations are identical apart from the fact that they require different
 key expansion models and that they use different numbers of rounds as specified
 in the AES standard (10, 12, and 14 respectively for the 128, 192, and 256-bit configurations).
-The top-level module is connected directly to the test bench via the "pt", "ct", and "kt" interfaces
+The top-level module is connected directly to the testbench via the "pt", "ct", and "kt" interfaces
 as described in @connections.
 
 == Decryption Engine
@@ -112,10 +98,10 @@ computes the byte substitution via a pre-computed 8-input lookup table.
 The engine accepts input ciphertext on the "ct" interface and stores it in the State register.
 The engine performs one decryption round every cycle. Taking into account the additional cycle of latency
 to assign the State register, each 128-bit decryption takes ROUND_COUNT + 1 cycles (11, 13, and 15
-for 128, 192, and 256-bit key length configurations respectively). The test bench drives ciphertext
+for 128, 192, and 256-bit key length configurations, respectively). The testbench drives ciphertext
 to the decryption engine from the "ct" interface, observes the primary output on the "pt" interface,
-observes the round key input for score-boarding, and observes the input to the InvSubBytes and
-InvMixColumns modules for coverage tracking.
+observes the round key input for scoreboarding, and observes the input to the InvSubBytes
+module for coverage tracking.
 
 == Key Expander
 
@@ -125,7 +111,7 @@ FIPS-197. The substitution is implemented with a pre-computed 8-input lookup tab
 the key expansion is sent to the key schedule buffer. Similar to the Decryption Engine, the Key
 Expander requires one cycle per round key plus an additional cycle of latency to populate the round
 key register (11, 13, and 15 cycles for 128, 192, and 256-bit key length configurations). The
-test bench drives key text to the expander on the "kt" interface and observes the expanded key
+testbench drives key text to the expander on the "kt" interface and observes the expanded key
 output immediately before the Key Schedule Buffer.
 
 #figure(
@@ -146,34 +132,34 @@ output immediately before the Key Schedule Buffer.
     [*pt*], [DUT], [128], [Plaintext output],
     [*pt_vld*], [DUT], [1], [Plaintext output valid signal],
 
-    table.cell(rowspan:5)[#rotate(-90deg, reflow: true)[*Decrypt*]],
+    table.cell(rowspan:4)[#rotate(-90deg, reflow: true)[*Decrypt*]],
     [*rkey_decrypt*], [DUT], [128], [Decrypter key schedule buffer data],
     [*rkey_vld_decrypt*], [DUT], [1], [Decrypter key schedule buffer valid],
     [*next_rkey_decrypt*], [DUT], [1], [Decrypter key schedule request],
     [*inv_shiftrows_out*], [DUT], [128], [Input to InvSubBytes module],
-    [*inv_addrkey_out*], [DUT], [128], [Input to InvMixColumns module],
 
     table.cell(rowspan:3)[#rotate(-90deg, reflow: true)[*Expand*]],
     [*rkey_keyexp*], [DUT], [128], [Expander key schedule buffer data],
     [*rkey_vld_keyexp*], [DUT], [1], [Expander key schedule buffer valid],
-    [*rot_word_out*], [DUT], [128], [Input to word substitution LUT]
+    [*rot_word_out*], [DUT], [32], [Input to word substitution LUT]
   ),
-  caption: [DUT connections for the AES test bench.]
+  caption: [DUT connections for the AES testbench.]
 ) <connections>
 
 #pagebreak()
 
-= Verification
+= Verification Plan
 
 == Functional Methods
 
-The primary goal of the verification of the key expansion module is to verify that the core
+The primary goal of the verification of the decryption core is to ensure that the core
 correctly implements the AES decryption algorithm described in FIPS-197. Apart from this, the core
 must correctly implement ready/valid interfaces and must respond properly to reset assertion.
-Primary coverage is driven through constrained random verification at the top level. Additional
-directed testing uses known test vectors from the FIPS-197, SP-800a, and AESAVS specifications.
-These vectors were provided by OpenCore with the original repository source. The complete
-verification plan is below.
+Primary coverage is driven through constrained random verification at the top-level. Additional
+directed testing uses known test vectors from the FIPS-197, NIST SP 800-38A, and AESAVS specifications.
+These vectors were provided by OpenCores with the original repository source (because the test
+vector repository is very large, the raw values are omitted here). The complete verification plan
+is below.
 
 #let breakable-figure(..args) = {
   show figure: set block(breakable: true)
@@ -196,90 +182,90 @@ verification plan is below.
 
     [*2*], table.cell(colspan:2)[*Reset*],
     table.cell(rowspan:4)[2.1], [Synchronous Warm Reset],
-    [Verify that DUT state transitions to 0 on reset and any stored key or Ciphertext is dropped.],
+    [Verify that DUT state transitions to 0 on reset and any stored key or ciphertext is dropped.],
     table.cell(colspan:2)[Assert that the expander and decoder modules return to state 0 after
     reset.],
     table.cell(colspan:2)[Verify that transactions before and after reset are processed
     successfully.],
-    table.cell(colspan:2)[Cover all FSM states at the moment of reset assertion through CRV.],
+    table.cell(colspan:2)[Cover all round counter FSM states at the moment of reset assertion through CRV
+    (11, 13, and 15 for 128, 192, and 256-bit parameterizations, respectively).],
 
     [*3*], table.cell(colspan:2)[*Decryption Engine*],
     table.cell(rowspan:2)[3.1], [Plaintext X-Propagation],
     [Verify that output signals on the "pt" interface are known when "pt_vld" is asserted.],
-    table.cell(colspan:2)[Assert that "pt" is known when "pt_valid" is asserted.],
+    table.cell(colspan:2)[Assert that "pt" is known when "pt_vld" is asserted.],
 
     table.cell(rowspan:3)[3.2], [Decryption Correctness],
     [Verify that the Decryption Engine correctly implements the AES decryption algorithm.],
-    table.cell(colspan:2)[Verify that the plain text output is consistent with that of the
+    table.cell(colspan:2)[Verify that the plaintext output is consistent with that of the
     behavioral model.],
-    table.cell(colspan:2)[Cover 64 evenly distributed bins for ciphertext and key text through CRV.],
+    table.cell(colspan:2)[Verify correct plaintext output against known test vectors from the
+    FIPS-197, NIST SP 800-38A, and AESAVS specifications.],
 
     table.cell(rowspan:2)[3.3], [InvSubBytes Correctness],
     [Verify that the InvSubBytes module correctly implements the inverse S-box.],
-    table.cell(colspan:2)[Cover all 256 entries in the InvSbox LUT for all byte lanes through CRV.],
-
-    table.cell(rowspan:2)[3.4], [InvMixColumns Correctness],
-    [Verify that the InvMixColumns module correctly implements the inverse column mixing
-    operation.],
-    table.cell(colspan:2)[Cover 64 evenly distributed bins for in InvMixColumns through CRV.],
+    table.cell(colspan:2)[Coverpoint on each byte lane of inv_shiftrows_out with 256 explicit value
+    bins to cover all LUT entries.],
 
     [*4*], table.cell(colspan:2)[*Key Schedule Buffer*],
     table.cell(rowspan:2)[4.1], [Round Key X-Propagation],
-    [Verify that output signals on the "rkey_out" interface are known when "rkey_vld_out" is
+    [Verify that output signals on the "rkey_decrypt" interface are known when "rkey_vld_decrypt" is
     asserted.],
-    table.cell(colspan:2)[Assert that "rkey_out" is known when "rkey_vld_out" is asserted.],
+    table.cell(colspan:2)[Assert that "rkey_decrypt" is known when "rkey_vld_decrypt" is asserted.],
 
     table.cell(rowspan:2)[4.2], [Round Key LIFO Ordering],
-    [Verify that round keys are returned on the "rkey_out" interface in the opposite order they
-    are provided on the "rkey_in" interface.],
-    table.cell(colspan:2)[Assert LIFO ordering between the "rkey_in" and "rkey_out" interfaces.],
+    [Verify that round keys are returned on the "rkey_decrypt" interface in the opposite order in
+    which they are provided on the "rkey_keyexp" interface.],
+    table.cell(colspan:2)[Assert LIFO ordering between the "rkey_decrypt" and "rkey_keyexp" interfaces.],
 
     [*5*], table.cell(colspan:2)[*Key Expander*],
     table.cell(rowspan:2)[5.1], [Round Key X-Propagation],
-    [Verify that output signals on the "rkey_in" interface are known when "rkey_vld_in" is
+    [Verify that output signals on the "rkey_keyexp" interface are known when "rkey_vld_keyexp" is
     asserted.],
-    table.cell(colspan:2)[Assert that "rkey_in" is known when "rkey_vld_in" is asserted.],
+    table.cell(colspan:2)[Assert that "rkey_keyexp" is known when "rkey_vld_keyexp" is asserted.],
 
     table.cell(rowspan:3)[5.2], [Key Expander Correctness],
     [Verify that the Key Expander correctly implements the AES key expansion algorithm.],
     table.cell(colspan:2)[Verify that the round key output is consistent with that of the
     behavioral model.],
-    table.cell(colspan:2)[Cover 64 evenly distributed bins for key text through CRV.],
+    table.cell(colspan:2)[Verify correct plaintext output against known test vectors from the
+    FIPS-197, NIST SP 800-38A, and AESAVS specifications.],
 
-    table.cell(rowspan:3)[5.2], [Substitution Correctness],
-    [Verify that the word substitution module correctly implements the SBox transform],
+    table.cell(rowspan:3)[5.3], [Substitution Correctness],
+    [Verify that the word substitution module correctly implements the S-box transform.],
     table.cell(colspan:2)[Verify that the round key output is consistent with that of the
     behavioral model.],
-    table.cell(colspan:2)[Cover all 256 entries in the SBox LUT through CRV.],
+    table.cell(colspan:2)[Coverpoint on each byte lane of rot_word_out with 256 explicit value
+    bins to cover all LUT entries.],
   ),
   caption: [Verification plan for the AES Decryption Core]
 ) <vplan>
 
 Constrained random verification is the primary testing method used in the design. Key coverage
-items, including the hard-coded S-box LUT, verification can all be tested using constrained random
+items, including the hard-coded S-box LUT, can all be exercised using constrained random
 verification. Because this verification approach relies heavily on a non-trivial software model,
 our results are cross-checked against publicly available known test vectors. Constrained random
-verification is done in the test bench framework in @tb below.
+verification is done in the testbench framework in @tb below.
 
 #figure(
   image("images/tb.drawio.png", width:65%),
-  caption: [Primary test bench used to verify the AES decryption core.]
+  caption: [Primary testbench used to verify the AES decryption core.]
 ) <tb>
 
 PT Agent, CT Agent, and KT Agent are parameterizations of a simple ready/valid interface
 agent. Agents drive and observe handshakes on their respective interfaces and publish events to
-their respective scoreboards. Each agent attaches to an interface which standardizes the interface
-as well as defining pin-level assertions. The decode and expand scoreboards hook into a software
+their respective scoreboards. Each agent attaches to an interface which provides driving and
+monitoring tasks and defines pin-level assertions. The decode and expand scoreboards hook into a software
 decryption model that is used as a reference for the verification.
 
 == Formal Methods
 
 In addition to the functional verification techniques described above, the design will be verified
-by using two formal techniques powered by VC Formal Datapath and the HECTOR prover. In particular,
+using two formal techniques powered by VC Formal Datapath and the HECTOR prover. In particular,
 two approaches seem particularly interesting:
 
 1. I hope to prove equivalence between the DUT and an implementation in a higher-level language.
-   Synopsys' HECTOR prover is designed to prove datapath equivalence between RTL and C++
+   Synopsys's HECTOR prover is designed to prove datapath equivalence between RTL and C++
    implementations of mathematical functions. By combining this with MATLAB Coder, which can
    automatically generate C++ code from MATLAB models, I should be able to extend this capability
    to MATLAB models as well. 
@@ -290,15 +276,16 @@ two approaches seem particularly interesting:
 #set par(first-line-indent: 0em)
 HECTOR contains some additional functionality that should help to ensure that this problem is
 tractable. By directing the prover to determine equivalence and inverseness of the individual
-modules in the design.
+modules in the design (such as InvMixColumns and InvSubBytes) rather than across the entire loop
+at once, the formal proof becomes much more tractable.
 #set par(first-line-indent: (amount: 0.25in, all: true))
 
-= Preliminary Test Bench Components
+= Preliminary Testbench Components
 
-Currently, I have completed the framework for the DUT-wiring portion of the Test Bench. The code that
+Currently, I have completed the framework for the DUT-wiring portion of the testbench. The code that
 instantiates the DUT and the relevant interfaces that bind to it have been implemented. The
-interfaces contain tasks for monitoring and driving DUT pins, as well as asynchronous assertions
-that verify the properties labeled as "assert" in the verification plan above. These Interfaces
+interfaces contain tasks for monitoring and driving DUT pins, as well as assertions
+that verify the properties labeled as "assert" in the verification plan above. These interfaces
 will be passed to the agents in the AES environment detailed above. 
 
 The code is still in its early phases; the modules and assertions currently implemented likely have
@@ -312,15 +299,15 @@ results at this time.
 #v(0.7em)
 #raw(read("../../src/hvl/tbs/aes_tb.sv"), lang: "systemverilog")
 
-=== AES Core Adapter
+== AES Core Adapter
 #v(0.7em)
 #raw(read("../../src/hvl/tbs/aes_core_adapter.sv"), lang: "systemverilog")
 
-=== Ready/Valid Interface
+== Ready/Valid Interface
 #v(0.7em)
 #raw(read("../../src/hvl/bfms/rv_if.sv"), lang: "systemverilog")
 
-=== Key Schedule Buffer Interface
+== Key Schedule Buffer Interface
 #v(0.7em)
 #raw(read("../../src/hvl/bfms/ksch_buffer_if.sv"), lang: "systemverilog")
 #set par(first-line-indent: (amount: 0.25in, all: true))
@@ -340,13 +327,13 @@ modules implement the S-box and inverse S-box transforms as hard-coded, 256-elem
 Covering every possible input to these lookup tables is critical to verifying the correctness of
 the design as a whole. Other modules along the datapath implement simpler functions that should
 break in predictable ways. The risk for these modules is relatively low, so a black-box
-testing approach with coverage tracked on the ciphertext and key text interfaces. Targeting 100%
-coverage on the Sbox and InvSbox modules may seem difficult to achieve, but the pseudo-randomness
-properties of the AES algorithm should help to ensure that our randomly generated test vectors
-effectively test the whole design.
+testing approach combining constrained-random stimulus with directed NIST test vectors at the top
+level interfaces is sufficient. Targeting 100% coverage on the Sbox and InvSbox modules may seem
+difficult to achieve, but the pseudo-randomness properties of the AES algorithm should help to
+ensure that our randomly generated test vectors effectively test the whole design.
 
 Overall, though there is a lot of verification code left to implement, the project is progressing
-quite well. A basic framework has been laid out for the test bench, and plans are in place for the
+quite well. A basic framework has been laid out for the testbench, and plans are in place for the
 environment, stimulus, and required tests. One of the most difficult parts that remains is the
 implementation of the reference model. Even so, I should be able to complete the model and
 test environment within the required time frame. In the near future, I will continue to develop

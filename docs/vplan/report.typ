@@ -297,19 +297,19 @@ results at this time.
 #set par(first-line-indent: 0em)
 == AES Core Test Bench
 #v(0.7em)
-#raw(read("../../src/hvl/tbs/aes_tb.sv"), lang: "systemverilog")
+#raw(read("aes_tb.sv"), lang: "systemverilog")
 
 == AES Core Adapter
 #v(0.7em)
-#raw(read("../../src/hvl/tbs/aes_core_adapter.sv"), lang: "systemverilog")
+#raw(read("aes_core_adapter.sv"), lang: "systemverilog")
 
 == Ready/Valid Interface
 #v(0.7em)
-#raw(read("../../src/hvl/bfms/rv_if.sv"), lang: "systemverilog")
+#raw(read("rv_if.sv"), lang: "systemverilog")
 
 == Key Schedule Buffer Interface
 #v(0.7em)
-#raw(read("../../src/hvl/bfms/ksch_buffer_if.sv"), lang: "systemverilog")
+#raw(read("ksch_buffer_if.sv"), lang: "systemverilog")
 #set par(first-line-indent: (amount: 0.25in, all: true))
 
 #pagebreak()
